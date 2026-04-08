@@ -420,3 +420,22 @@ class TestPlatformToolsetConsistency:
                 f"Platform {platform!r} in tools_config but missing from "
                 f"skills_config PLATFORMS"
             )
+
+
+def test_messaging_toolset_in_configurable_toolsets():
+    """Regression: 'messaging' must be in CONFIGURABLE_TOOLSETS.
+
+    Without this entry, tools registered to the 'messaging' toolset
+    (e.g. send_message) are silently dropped from every messaging-platform
+    session because _get_platform_tools() only reverse-maps toolset keys
+    that appear in CONFIGURABLE_TOOLSETS.
+
+    See https://github.com/NousResearch/hermes-agent/issues/5991
+    """
+    from hermes_cli.tools_config import CONFIGURABLE_TOOLSETS
+
+    configurable_keys = {ts_key for ts_key, _, _ in CONFIGURABLE_TOOLSETS}
+    assert "messaging" in configurable_keys, (
+        "'messaging' toolset missing from CONFIGURABLE_TOOLSETS — "
+        "send_message will be silently dropped from platform sessions"
+    )
