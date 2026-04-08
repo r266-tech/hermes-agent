@@ -1043,7 +1043,7 @@ _hermes() {
     esac
 }
 
-_hermes "$@"
+compdef _hermes hermes
 '''
 
 
