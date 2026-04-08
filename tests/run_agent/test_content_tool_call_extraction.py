@@ -10,15 +10,15 @@ import pytest
 
 def _make_agent(tool_names):
     """Create a minimal mock agent with the given tool names registered."""
-    from run_agent import HermesAgent
+    from run_agent import AIAgent
 
-    agent = MagicMock(spec=HermesAgent)
+    agent = MagicMock(spec=AIAgent)
     agent.tools = [
         {"type": "function", "function": {"name": n, "parameters": {}}}
         for n in tool_names
     ]
     agent._try_extract_content_tool_calls = (
-        HermesAgent._try_extract_content_tool_calls.__get__(agent, HermesAgent)
+        AIAgent._try_extract_content_tool_calls.__get__(agent, AIAgent)
     )
     return agent
 
