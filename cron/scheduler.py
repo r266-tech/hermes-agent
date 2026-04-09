@@ -661,7 +661,7 @@ def run_job(job: dict) -> tuple[bool, str, str, Optional[str]]:
             providers_ignored=pr.get("ignore"),
             providers_order=pr.get("order"),
             provider_sort=pr.get("sort"),
-            disabled_toolsets=["cronjob", "messaging", "clarify"],
+            disabled_toolsets=["cronjob", "messaging", "clarify", "delegation"],
             quiet_mode=True,
             skip_memory=True,  # Cron system prompts would corrupt user representations
             platform="cron",
