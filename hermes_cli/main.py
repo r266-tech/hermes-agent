@@ -1678,8 +1678,9 @@ def _remove_custom_provider(config):
 def _model_flow_named_custom(config, provider_info):
     """Handle a named custom provider from config.yaml custom_providers list.
 
-    If the entry has a saved model name, activates it immediately.
-    Otherwise probes the endpoint's /models API to let the user pick one.
+    Always probes the endpoint for available models so the user can switch
+    between them.  The previously saved model is pre-selected as default.
+    If probing fails and a saved model exists, falls back to activating it.
     """
     from hermes_cli.auth import _save_model_choice, deactivate_provider
     from hermes_cli.config import load_config, save_config
@@ -1690,40 +1691,32 @@ def _model_flow_named_custom(config, provider_info):
     api_key = provider_info.get("api_key", "")
     saved_model = provider_info.get("model", "")
 
-    # If a model is saved, just activate immediately — no probing needed
-    if saved_model:
-        _save_model_choice(saved_model)
-
-        cfg = load_config()
-        model = cfg.get("model")
-        if not isinstance(model, dict):
-            model = {"default": model} if model else {}
-            cfg["model"] = model
-        model["provider"] = "custom"
-        model["base_url"] = base_url
-        if api_key:
-            model["api_key"] = api_key
-        save_config(cfg)
-        deactivate_provider()
-
-        print(f"✅ Switched to: {saved_model}")
-        print(f"   Provider: {name} ({base_url})")
-        return
-
-    # No saved model — probe endpoint and let user pick
+    # Always try to probe available models so the user can switch
     print(f"  Provider: {name}")
     print(f"  URL:      {base_url}")
+    if saved_model:
+        print(f"  Current:  {saved_model}")
     print()
-    print("No model saved for this provider. Fetching available models...")
+    print("Fetching available models...")
     models = fetch_api_models(api_key, base_url, timeout=8.0)
 
+    model_name = None
+
     if models:
+        # Determine default cursor position (saved model or 0)
+        default_idx = 0
+        if saved_model and saved_model in models:
+            default_idx = models.index(saved_model)
+
         print(f"Found {len(models)} model(s):\n")
         try:
             from simple_term_menu import TerminalMenu
-            menu_items = [f"  {m}" for m in models] + ["  Cancel"]
+            menu_items = [
+                f"  {m} (current)" if m == saved_model else f"  {m}"
+                for m in models
+            ] + ["  Cancel"]
             menu = TerminalMenu(
-                menu_items, cursor_index=0,
+                menu_items, cursor_index=default_idx,
                 menu_cursor="-> ", menu_cursor_style=("fg_green", "bold"),
                 menu_highlight_style=("fg_green",),
                 cycle_cursor=True, clear_screen=False,
@@ -1737,7 +1730,8 @@ def _model_flow_named_custom(config, provider_info):
             model_name = models[idx]
         except (ImportError, NotImplementedError):
             for i, m in enumerate(models, 1):
-                print(f"  {i}. {m}")
+                suffix = " (current)" if m == saved_model else ""
+                print(f"  {i}. {m}{suffix}")
             print(f"  {len(models) + 1}. Cancel")
             print()
             try:
@@ -1753,6 +1747,10 @@ def _model_flow_named_custom(config, provider_info):
             except (ValueError, KeyboardInterrupt, EOFError):
                 print("\nCancelled.")
                 return
+    elif saved_model:
+        # Probing failed but we have a saved model — fall back to it
+        print("Could not fetch models; activating saved model.")
+        model_name = saved_model
     else:
         print("Could not fetch models from endpoint. Enter model name manually.")
         try:
@@ -1782,7 +1780,11 @@ def _model_flow_named_custom(config, provider_info):
     # Save model name to the custom_providers entry for next time
     _save_custom_provider(base_url, api_key, model_name)
 
-    print(f"\n✅ Model set to: {model_name}")
+    changed = model_name != saved_model
+    if changed:
+        print(f"\n✅ Model switched to: {model_name}")
+    else:
+        print(f"\n✅ Kept model: {model_name}")
     print(f"   Provider: {name} ({base_url})")
 
 
