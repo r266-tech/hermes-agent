@@ -347,11 +347,15 @@ async def test_stop_does_not_suspend_session():
         )
     )
 
+    stop_event = _make_event(text="/stop")
+
     # Path 1: /stop while sentinel is set (agent starting)
     runner._running_agents[session_key] = _AGENT_PENDING_SENTINEL
-    stop_event = _make_event(text="/stop")
     await runner._handle_message(stop_event)
     runner.session_store.suspend_session.assert_not_called()
+    assert session_key not in runner._running_agents, (
+        "sentinel must be cleaned up after /stop"
+    )
 
     # Path 2: /stop while real agent is running
     runner.session_store.reset_mock()
@@ -359,10 +363,12 @@ async def test_stop_does_not_suspend_session():
     runner._running_agents[session_key] = fake_agent
     await runner._handle_message(stop_event)
     runner.session_store.suspend_session.assert_not_called()
+    assert session_key not in runner._running_agents, (
+        "agent must be removed after /stop"
+    )
 
     # Path 3: /stop with no agent (no-op)
     runner.session_store.reset_mock()
-    assert session_key not in runner._running_agents
     await runner._handle_message(stop_event)
     runner.session_store.suspend_session.assert_not_called()
 
