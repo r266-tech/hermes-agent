@@ -7190,7 +7190,7 @@ class HermesCLI:
                 _ptt_key = _raw_ptt_lower.replace("ctrl+", "c-").replace("shift+", "s-")
         except Exception:
             _ptt_key = "c-b"
-        _ptt_display = _ptt_key.replace("c-", "Ctrl+").upper()
+        _ptt_display = _ptt_key.replace("c-", "Ctrl+").replace("s-", "Shift+").upper()
         _cprint(f"\n{_ACCENT}Voice mode enabled{tts_status}{_RST}")
         _cprint(f"  {_DIM}{_ptt_display} to start/stop recording{_RST}")
         _cprint(f"  {_DIM}/voice tts  to toggle speech output{_RST}")
